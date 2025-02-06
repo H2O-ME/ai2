@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>清言</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+    <!-- 开屏页面 -->
+    <div class="splash-screen">
+        <div class="splash-content">
+            <h1>THW</h1>
+            <p>by cursor and github pages</p>
+        </div>
+    </div>
+
+    <div class="app-container" style="opacity: 0;">
+        <div class="sidebar">
+            <button class="new-chat-btn" title="新建对话">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+
+        <div class="main-content">
+            <div class="top-nav">
+                <div class="model-selector">
+                    <button class="model-btn" data-model="gpt">GPT</button>
+                    <button class="model-btn" data-model="zhipu">智谱AI</button>
+                    <button class="model-btn" data-model="qwen">Qwen</button>
+                    <button class="model-btn" data-model="flux">FLUX</button>
+                    <button class="model-btn" data-model="sd">Stable Diffusion</button>
+                    <button class="model-btn" data-model="video">CogVideoX</button>
+                    <button class="model-btn" data-model="deepseek">DeepSeek</button>
+                    <button class="model-btn" data-model="marco">Marco-o1</button>
+                    <button class="model-btn" data-model="yi">Yi</button>
+                    <button class="model-btn" data-model="internlm">InternLM2</button>
+                </div>
+                <div class="gpt-model-selector" style="display: none;">
+                    <select id="gptModelSelect">
+                        <optgroup label="GPT-4">
+                            <option value="gpt-4">GPT-4</option>
+                            <option value="gpt-4o-mini-2024-07-18">GPT-4 Mini-2024-07-18</option>
+                            <option value="gpt-4o-mini">GPT-4 Mini</option>
+                        </optgroup>
+                        <optgroup label="GPT-3.5">
+                            <option value="gpt-3.5-turbo-1106">GPT-3.5 Turbo</option>
+                            <option value="gpt-3.5-turbo-0613">GPT-3.5 Turbo-0613</option>
+                            <option value="gpt-3.5-turbo-0301">GPT-3.5 Turbo-0301</option>
+                            <option value="gpt-3.5">GPT-3.5</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="zhipu-model-selector" style="display: none;">
+                    <select id="zhipuModelSelect">
+                        <option value="glm-4v-flash">glm-4v-flash</option>
+                        <option value="THUDM/glm-4-9b-chat">GLM-4-9B-Chat</option>
+                    </select>
+                </div>
+                <div class="qwen-model-selector" style="display: none;">
+                    <select id="qwenModelSelect">
+                        <option value="Qwen/Qwen2.5-7B-Instruct">Qwen2.5-7B-Instruct</option>
+                    </select>
+                </div>
+                <div class="flux-model-selector" style="display: none;">
+                    <select id="fluxModelSelect">
+                        <option value="black-forest-labs/FLUX.1-schnell">FLUX.1-schnell</option>
+                    </select>
+                </div>
+                <div class="sd-model-selector" style="display: none;">
+                    <select id="sdModelSelect">
+                        <option value="stabilityai/stable-diffusion-3-5-large">Stable Diffusion v3.5</option>
+                    </select>
+                </div>
+                <div class="video-model-selector" style="display: none;">
+                    <select id="videoModelSelect">
+                        <option value="cogvideox">CogVideoX</option>
+                    </select>
+                </div>
+                <div class="deepseek-model-selector" style="display: none;">
+                    <select id="deepseekModelSelect">
+                        <option value="deepseek">DeepSeek Chat</option>
+                    </select>
+                </div>
+                <div class="marco-model-selector" style="display: none;">
+                    <select id="marcoModelSelect">
+                        <option value="AIDC-AI/Marco-o1">Marco-o1</option>
+                    </select>
+                </div>
+                <div class="yi-model-selector" style="display: none;">
+                    <select id="yiModelSelect">
+                        <option value="01-ai/Yi-1.5-9B-Chat-16K">Yi-1.5-9B-Chat-16K</option>
+                    </select>
+                </div>
+                <div class="internlm-model-selector" style="display: none;">
+                    <select id="internlmModelSelect">
+                        <option value="internlm/internlm2_5-7b-chat">InternLM2-Chat-7B</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-messages" id="chatHistory">
+                    <!-- 欢迎界面通过JavaScript动态添加 -->
+                </div>
+
+                <div class="input-area">
+                    <textarea 
+                        id="userInput" 
+                        placeholder="请输入您的问题..."
+                        rows="1"
+                    ></textarea>
+                    <button id="sendBtn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+
+                <div class="author-info">
+                    <div class="author-content">
+                        <span>Built with <i class="fas fa-heart"></i> by THW using </span>
+                        <a href="https://cursor.sh" target="_blank" rel="noopener noreferrer">
+                            <img src="https://registry.npmmirror.com/@lobehub/icons-static-png/1.10.0/files/dark/cursor.png" alt="Cursor" class="cursor-logo">
+                            Cursor
+                        </a>
+                        <span>&</span>
+                        <a href="https://pages.github.com" target="_blank" rel="noopener noreferrer">
+                            <i class="fab fa-github"></i> Pages
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <div class="image-viewer" style="display: none;">
+        <div class="image-viewer-content">
+            <img src="" alt="放大图片">
+            <button class="close-viewer">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+</body>
+</html> 
