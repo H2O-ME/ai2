@@ -24,88 +24,110 @@
 
     <div class="app-container" style="opacity: 0;">
         <div class="sidebar">
-            <button class="new-chat-btn" title="新建对话">
+            <div class="new-chat-btn" title="新建对话">
                 <i class="fas fa-plus"></i>
-            </button>
-        </div>
-
-        <div class="main-content">
-            <div class="top-nav">
-                <div class="model-selector">
-                    <button class="model-btn" data-model="gpt">GPT</button>
-                    <button class="model-btn" data-model="zhipu">智谱AI</button>
-                    <button class="model-btn" data-model="qwen">Qwen</button>
-                    <button class="model-btn" data-model="flux">FLUX</button>
-                    <button class="model-btn" data-model="sd">Stable Diffusion</button>
-                    <button class="model-btn" data-model="video">CogVideoX</button>
-                    <button class="model-btn" data-model="deepseek">DeepSeek</button>
-                    <button class="model-btn" data-model="marco">Marco-o1</button>
-                    <button class="model-btn" data-model="yi">Yi</button>
-                    <button class="model-btn" data-model="internlm">InternLM2</button>
+                <span class="btn-text">新建对话</span>
+            </div>
+            <div class="model-list">
+                <!-- GPT 模型 -->
+                <div class="model-item" data-model="gpt">
+                    <img src="https://img.icons8.com/?size=100&id=FBO05Dys9QCg&format=png&color=000000" alt="GPT">
+                    <span class="model-name">GPT</span>
                 </div>
-                <div class="gpt-model-selector" style="display: none;">
+                <div class="model-sub-select gpt-model-selector">
                     <select id="gptModelSelect">
                         <optgroup label="GPT-4">
                             <option value="gpt-4">GPT-4</option>
-                            <option value="gpt-4o-mini-2024-07-18">GPT-4 Mini-2024-07-18</option>
-                            <option value="gpt-4o-mini">GPT-4 Mini</option>
+                            <option value="gpt-4o">GPT-4 Turbo</option>
                         </optgroup>
                         <optgroup label="GPT-3.5">
-                            <option value="gpt-3.5-turbo-1106">GPT-3.5 Turbo</option>
-                            <option value="gpt-3.5-turbo-0613">GPT-3.5 Turbo-0613</option>
-                            <option value="gpt-3.5-turbo-0301">GPT-3.5 Turbo-0301</option>
+                            <option value="gpt-3.5-turbo-1106">GPT-3.5 Turbo (最新)</option>
                             <option value="gpt-3.5">GPT-3.5</option>
                         </optgroup>
                     </select>
                 </div>
-                <div class="zhipu-model-selector" style="display: none;">
+
+                <!-- 智谱AI模型 -->
+                <div class="model-item" data-model="zhipu">
+                    <img src="https://chatglm.cn/img/logo-collapse.d00ef130.svg" alt="智谱AI">
+                    <span class="model-name">智谱AI</span>
+                </div>
+                <div class="model-sub-select zhipu-model-selector">
                     <select id="zhipuModelSelect">
                         <option value="glm-4v-flash">glm-4v-flash</option>
                         <option value="THUDM/glm-4-9b-chat">GLM-4-9B-Chat</option>
                     </select>
                 </div>
-                <div class="qwen-model-selector" style="display: none;">
+
+                <!-- 通义千问 -->
+                <div class="model-item" data-model="qwen">
+                    <img src="https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/Tongyi.svg" alt="通义千问">
+                    <span class="model-name">通义千问</span>
+                </div>
+                <div class="model-sub-select qwen-model-selector">
                     <select id="qwenModelSelect">
-                        <option value="Qwen/Qwen2.5-7B-Instruct">Qwen2.5-7B-Instruct</option>
+                        <option value="qwen-max">Qwen Max</option>
+                        <option value="qwen-plus">Qwen Plus</option>
                     </select>
                 </div>
-                <div class="flux-model-selector" style="display: none;">
-                    <select id="fluxModelSelect">
-                        <option value="black-forest-labs/FLUX.1-schnell">FLUX.1-schnell</option>
-                    </select>
+
+                <!-- FLUX -->
+                <div class="model-item" data-model="flux">
+                    <img src="https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/blackforestlabs.svg" alt="FLUX">
+                    <span class="model-name">FLUX</span>
                 </div>
-                <div class="sd-model-selector" style="display: none;">
+
+                <!-- Stable Diffusion -->
+                <div class="model-item" data-model="sd">
+                    <img src="https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/Stability.svg" alt="Stable Diffusion">
+                    <span class="model-name">Stable Diffusion</span>
+                </div>
+                <div class="model-sub-select sd-model-selector">
                     <select id="sdModelSelect">
-                        <option value="stabilityai/stable-diffusion-3-5-large">Stable Diffusion v3.5</option>
+                        <option value="sd-turbo">SD Turbo</option>
+                        <option value="sdxl">SDXL</option>
+                        <option value="sd-xl-turbo">SD-XL Turbo</option>
                     </select>
                 </div>
-                <div class="video-model-selector" style="display: none;">
-                    <select id="videoModelSelect">
-                        <option value="cogvideox">CogVideoX</option>
-                    </select>
+
+                <!-- CogVideoX -->
+                <div class="model-item" data-model="video">
+                    <img src="https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/Lightricks.png" alt="CogVideoX">
+                    <span class="model-name">CogVideoX</span>
                 </div>
-                <div class="deepseek-model-selector" style="display: none;">
+
+                <!-- DeepSeek -->
+                <div class="model-item" data-model="deepseek">
+                    <img src="https://www.deepseek.com/favicon.ico" alt="DeepSeek">
+                    <span class="model-name">DeepSeek</span>
+                </div>
+                <div class="model-sub-select deepseek-model-selector">
                     <select id="deepseekModelSelect">
-                        <option value="deepseek">DeepSeek Chat</option>
+                        <option value="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B">DeepSeek-R1-Distill-Qwen-7B</option>
                     </select>
                 </div>
-                <div class="marco-model-selector" style="display: none;">
-                    <select id="marcoModelSelect">
-                        <option value="AIDC-AI/Marco-o1">Marco-o1</option>
-                    </select>
+
+                <!-- Marco-o1 -->
+                <div class="model-item" data-model="marco">
+                    <img src="https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/AIDC_AI.png" alt="Marco-o1">
+                    <span class="model-name">Marco-o1</span>
                 </div>
-                <div class="yi-model-selector" style="display: none;">
-                    <select id="yiModelSelect">
-                        <option value="01-ai/Yi-1.5-9B-Chat-16K">Yi-1.5-9B-Chat-16K</option>
-                    </select>
+
+                <!-- Yi -->
+                <div class="model-item" data-model="yi">
+                    <img src="https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/Yi.svg" alt="Yi">
+                    <span class="model-name">Yi</span>
                 </div>
-                <div class="internlm-model-selector" style="display: none;">
-                    <select id="internlmModelSelect">
-                        <option value="internlm/internlm2_5-7b-chat">InternLM2-Chat-7B</option>
-                    </select>
+
+                <!-- InternLM2 -->
+                <div class="model-item" data-model="internlm">
+                    <img src="https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/internlm.svg" alt="InternLM2">
+                    <span class="model-name">InternLM2</span>
                 </div>
             </div>
+        </div>
 
+        <div class="main-content">
             <div class="chat-container">
                 <div class="chat-messages" id="chatHistory">
                     <!-- 欢迎界面通过JavaScript动态添加 -->
@@ -120,20 +142,6 @@
                     <button id="sendBtn">
                         <i class="fas fa-paper-plane"></i>
                     </button>
-                </div>
-
-                <div class="author-info">
-                    <div class="author-content">
-                        <span>Built with <i class="fas fa-heart"></i> by THW using </span>
-                        <a href="https://cursor.sh" target="_blank" rel="noopener noreferrer">
-                            <img src="https://registry.npmmirror.com/@lobehub/icons-static-png/1.10.0/files/dark/cursor.png" alt="Cursor" class="cursor-logo">
-                            Cursor
-                        </a>
-                        <span>&</span>
-                        <a href="https://pages.github.com" target="_blank" rel="noopener noreferrer">
-                            <i class="fab fa-github"></i> Pages
-                        </a>
-                    </div>
                 </div>
             </div>
         </div>

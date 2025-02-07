@@ -127,8 +127,8 @@ class AIChatApp {
                 qwen: 'https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/Tongyi.svg',
                 flux: 'https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/blackforestlabs.svg',
                 sd: 'https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/Stability.svg',
-                video: 'https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/Lightricks.png',  // 添加 LTX-Video 头像
-                deepseek: 'https://www.deepseek.com/favicon.ico',  // DeepSeek的图标
+                video: 'https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/Lightricks.png',
+                deepseek: 'https://www.deepseek.com/favicon.ico',
                 marco: 'https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/AIDC_AI.png',
                 yi: 'https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/Yi.svg',
                 internlm: 'https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/internlm.svg'
@@ -296,17 +296,31 @@ class AIChatApp {
             }
         };
 
-        // 添加 DeepSeek 配置
+        // 修改 DeepSeek 配置
         this.deepseekConfig = {
-            apiUrl: 'https://api.pearktrue.cn/api/deepseek/',
-            model: 'deepseek',
             models: {
-                'deepseek': {
-                    name: 'DeepSeek',
+                // 原有的 V3 模型 - 使用 pearktrue API
+                'deepseek-v3': {
+                    name: 'DeepSeek V3',
                     maxTokens: 4096,
-                    supportImage: false
+                    supportImage: false,
+                    apiUrl: 'https://api.pearktrue.cn/api/deepseek/',
+                    description: 'DeepSeek-V3为自研MoE模型，671B参数，激活37B，在14.8T token上进行了预训练。'
+                },
+                // 新增的推理模型 - 使用 SiliconFlow API
+                'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B': {
+                    name: 'DeepSeek-R1-Distill-Qwen-7B',
+                    maxTokens: 4096,
+                    supportImage: false,
+                    supportReasoning: true,
+                    supportMultiLingual: true,
+                    supportStructuredOutput: true,
+                    apiKey: 'sk-hyeudoewxhrzksdcsfbyzkprbocvedmdhydzzmmpuohxxphs',
+                    baseUrl: 'https://api.siliconflow.cn/v1/chat/completions',
+                    description: 'DeepSeek-R1-Distill-Qwen-7B 是一个专注于推理能力的模型，基于 Qwen-7B 进行蒸馏优化。'
                 }
-            }
+            },
+            model: 'deepseek-v3' // 默认使用 V3 模型
         };
 
         // 添加 Marco-o1 配置
@@ -513,17 +527,33 @@ class AIChatApp {
                 </div>
             `;
         } else if (this.currentModel === 'deepseek') {
+            const currentModel = this.deepseekConfig.models[this.deepseekConfig.model];
             welcomeContent = `
                 <div class="ai-avatar">
                     <img src="${this.avatars.ai[this.currentModel]}" alt="DeepSeek头像">
                 </div>
-                <h2>DeepSeek</h2>
-                <p>DeepSeek-V3为自研MoE模型，671B参数，激活37B，在14.8T token上进行了预训练。</p>
+                <h2>DeepSeek ${currentModel.name}</h2>
+                <p>${currentModel.description}</p>
+                ${this.deepseekConfig.model === 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B' ? `
+                    <div class="model-features">
+                        <span><i class="fas fa-brain"></i> 推理分析</span>
+                        <span><i class="fas fa-code"></i> 代码生成</span>
+                        <span><i class="fas fa-language"></i> 多语言</span>
+                        <span><i class="fas fa-project-diagram"></i> 结构化输出</span>
+                    </div>
+                ` : ''}
                 <div class="suggestion-grid">
-                    <button class="suggestion-btn">做个自我介绍</button>
-                    <button class="suggestion-btn">帮我写一段python代码</button>
-                    <button class="suggestion-btn">解释人工智能</button>
-                    <button class="suggestion-btn">生成小红书文案</button>
+                    ${this.deepseekConfig.model === 'deepseek-v3' ? `
+                        <button class="suggestion-btn">做个自我介绍</button>
+                        <button class="suggestion-btn">帮我写一段python代码</button>
+                        <button class="suggestion-btn">解释人工智能</button>
+                        <button class="suggestion-btn">生成小红书文案</button>
+                    ` : `
+                        <button class="suggestion-btn">分析一个数学问题</button>
+                        <button class="suggestion-btn">解释一个复杂概念</button>
+                        <button class="suggestion-btn">推理一个逻辑问题</button>
+                        <button class="suggestion-btn">生成示例代码</button>
+                    `}
                 </div>
             `;
         } else if (this.currentModel === 'marco') {
@@ -604,6 +634,20 @@ class AIChatApp {
     }
 
     initializeEventListeners() {
+        // 添加模型选择事件
+        document.querySelectorAll('.model-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const model = item.dataset.model;
+                this.switchModel(model);
+                
+                // 更新激活状态
+                document.querySelectorAll('.model-item').forEach(el => {
+                    el.classList.remove('active');
+                });
+                item.classList.add('active');
+            });
+        });
+
         // 发送消息事件
         this.sendBtn.addEventListener('click', () => this.sendMessage());
         this.userInput.addEventListener('keypress', (e) => {
@@ -732,6 +776,16 @@ class AIChatApp {
                 }
             }
         });
+
+        // 添加 DeepSeek 模型选择器事件
+        const deepseekModelSelect = document.getElementById('deepseekModelSelect');
+        if (deepseekModelSelect) {
+            deepseekModelSelect.addEventListener('change', () => {
+                console.log('Selected DeepSeek model:', deepseekModelSelect.value);
+                this.deepseekConfig.model = deepseekModelSelect.value;
+                this.createNewChat(true);
+            });
+        }
     }
 
     initializeTextarea() {
@@ -764,44 +818,78 @@ class AIChatApp {
         // 更新当前模型
         this.currentModel = model;
         
+        // 更新顶部模型选择器
+        const currentModelSelect = document.getElementById('currentModelSelect');
+        if (currentModelSelect) {
+            currentModelSelect.style.display = 'none';
+            
+            // 根据不同模型显示对应的选择器
+            switch(model) {
+                case 'gpt':
+                    currentModelSelect.innerHTML = this.getGPTModelOptions();
+                    currentModelSelect.style.display = 'block';
+                    break;
+                case 'zhipu':
+                    currentModelSelect.innerHTML = this.getZhipuModelOptions();
+                    currentModelSelect.style.display = 'block';
+                    break;
+                // ... 其他模型的选项
+            }
+            
+            // 设置当前选中的模型
+            if (currentModelSelect.style.display === 'block') {
+                currentModelSelect.value = this.getCurrentModelValue();
+            }
+        }
+
         // 更新UI
-        this.modelBtns.forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.model === model);
+        document.querySelectorAll('.model-item').forEach(item => {
+            // 移除所有激活状态
+            item.classList.remove('active');
+            // 隐藏所有子选择器
+            const subSelect = item.nextElementSibling;
+            if (subSelect && subSelect.classList.contains('model-sub-select')) {
+                if (item.dataset.model !== model) {
+                    subSelect.style.maxHeight = '0';
+                    subSelect.style.padding = '0';
+                    subSelect.style.marginTop = '0';
+                    subSelect.style.marginBottom = '0';
+                    subSelect.style.opacity = '0';
+                }
+            }
         });
+
+        // 激活当前选中的模型
+        const currentItem = document.querySelector(`.model-item[data-model="${model}"]`);
+        if (currentItem) {
+            currentItem.classList.add('active');
+            // 显示当前模型的子选择器（如果有多个选项）
+            const subSelect = currentItem.nextElementSibling;
+            if (subSelect && 
+                subSelect.classList.contains('model-sub-select') && 
+                subSelect.querySelector('select').options.length > 1) {
+                subSelect.style.maxHeight = '200px';
+                subSelect.style.padding = '8px';
+                subSelect.style.marginTop = '2px';
+                subSelect.style.marginBottom = '2px';
+                subSelect.style.opacity = '1';
+            }
+        }
 
         // 更新模型选择器显示状态
-        const gptModelSelector = document.querySelector('.gpt-model-selector');
-        const zhipuModelSelector = document.querySelector('.zhipu-model-selector');
-        const qwenModelSelector = document.querySelector('.qwen-model-selector');
-        const fluxModelSelector = document.querySelector('.flux-model-selector');
-        const sdModelSelector = document.querySelector('.sd-model-selector');
-        const videoModelSelector = document.querySelector('.video-model-selector');
-        
-        // 隐藏所有选择器
-        [gptModelSelector, zhipuModelSelector, qwenModelSelector, fluxModelSelector, sdModelSelector, videoModelSelector].forEach(selector => {
-            if (selector) selector.style.display = 'none';
+        document.querySelectorAll('.model-select').forEach(selector => {
+            selector.style.display = 'none';
         });
-
-        // 显示当前模型的选择器
-        switch(model) {
-            case 'gpt':
-                if (gptModelSelector) gptModelSelector.style.display = 'block';
-                break;
-            case 'zhipu':
-                if (zhipuModelSelector) zhipuModelSelector.style.display = 'block';
-                break;
-            case 'qwen':
-                if (qwenModelSelector) qwenModelSelector.style.display = 'block';
-                break;
-            case 'flux':
-                if (fluxModelSelector) fluxModelSelector.style.display = 'block';
-                break;
-            case 'sd':
-                if (sdModelSelector) sdModelSelector.style.display = 'block';
-                break;
-            case 'video':
-                if (videoModelSelector) videoModelSelector.style.display = 'block';
-                break;
+        
+        const currentSelector = document.querySelector(`.${model}-model-selector`);
+        if (currentSelector) {
+            currentSelector.style.display = 'block';
+            
+            // 设置当前选中的模型
+            const select = currentSelector.querySelector('select');
+            if (select) {
+                select.value = this.getCurrentModelValue();
+            }
         }
 
         // 更新文件上传按钮状态
@@ -1965,100 +2053,66 @@ class AIChatApp {
         }
     }
 
-    // 添加 DeepSeek 的响应处理方法
     async getDeepSeekResponse(message, systemPrompt) {
         try {
             this.sendBtn.classList.add('loading');
+            const currentModel = this.deepseekConfig.models[this.deepseekConfig.model];
 
-            // 构建请求消息
-            let messages = [systemPrompt];
+            // 根据不同模型使用不同的请求方式
+            if (this.deepseekConfig.model === 'deepseek-v3') {
+                // V3 模型的请求处理
+                const response = await fetch(currentModel.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ messages: [{ role: "user", content: message }] })
+                });
 
-            // 添加历史对话
-            if (this.conversationHistory.length > 0) {
-                messages = messages.concat(this.conversationHistory.slice(-10));
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (data.code !== 200) {
+                    throw new Error(data.msg || 'DeepSeek API 响应错误');
+                }
+
+                return this.handleDeepSeekResponse(data.message, message);
+            } else {
+                // R1-Distill 模型的请求处理
+                let messages = [];
+                if (this.conversationHistory.length > 0) {
+                    messages = messages.concat(this.conversationHistory.slice(-10));
+                }
+
+                const userMessage = `让我们一步一步思考这个问题：\n${message}\n请给出详细的推理过程和最终结论。`;
+                messages.push({
+                    role: "user",
+                    content: userMessage
+                });
+
+                const response = await fetch(currentModel.baseUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentModel.apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: this.deepseekConfig.model,
+                        messages: messages,
+                        temperature: 0.7,
+                        max_tokens: currentModel.maxTokens,
+                        stream: true
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                return this.handleDeepSeekStreamResponse(response, message);
             }
-
-            // 添加当前消息
-            messages.push({
-                role: "user",
-                content: message
-            });
-
-            // 发送请求
-            const response = await fetch(this.deepseekConfig.apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ messages })
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            if (data.code !== 200) {
-                throw new Error(data.msg || 'DeepSeek API 响应错误');
-            }
-
-            // 创建消息元素
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message', 'ai-message');
-            
-            // 添加头像
-            const avatar = document.createElement('div');
-            avatar.className = 'avatar';
-            const avatarImg = document.createElement('img');
-            avatarImg.src = this.avatars.ai[this.currentModel];
-            avatarImg.alt = 'AI avatar';
-            avatar.appendChild(avatarImg);
-            messageDiv.appendChild(avatar);
-
-            // 添加消息内容
-            const messageContent = document.createElement('div');
-            messageContent.classList.add('message-content');
-            messageContent.innerHTML = '<div class="loading">正在思考...</div>';
-            messageDiv.appendChild(messageContent);
-            this.chatHistory.appendChild(messageDiv);
-
-            // 使用 marked 渲染回复内容
-            const htmlContent = marked.parse(data.message);
-            messageContent.innerHTML = htmlContent;
-
-            // 渲染数学公式
-            renderMathInElement(messageContent, {
-                delimiters: [
-                    {left: '$$', right: '$$', display: true},
-                    {left: '$', right: '$', display: false},
-                    {left: '\\[', right: '\\]', display: true},
-                    {left: '\\(', right: '\\)', display: false}
-                ],
-                throwOnError: false
-            });
-
-            // 高亮代码块
-            messageContent.querySelectorAll('pre code').forEach((block) => {
-                hljs.highlightElement(block);
-            });
-
-            // 滚动到底部
-            this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
-
-            // 保存对话历史
-            this.conversationHistory.push({
-                role: "user",
-                content: message
-            });
-
-            this.conversationHistory.push({
-                role: "assistant",
-                content: data.message
-            });
-
-            return data.message;
-
         } catch (error) {
             console.error('DeepSeek API调用错误:', error);
             this.addSystemMessage(`API调用失败: ${error.message}`);
@@ -2791,6 +2845,41 @@ class AIChatApp {
                 viewer.style.display = 'none';
             }
         });
+    }
+
+    // 获取 GPT 模型选项
+    getGPTModelOptions() {
+        return `
+            <optgroup label="GPT-4">
+                <option value="gpt-4">GPT-4</option>
+                <option value="gpt-4o">GPT-4 Turbo</option>
+            </optgroup>
+            <optgroup label="GPT-3.5">
+                <option value="gpt-3.5-turbo-1106">GPT-3.5 Turbo (最新)</option>
+                <option value="gpt-3.5">GPT-3.5</option>
+            </optgroup>
+        `;
+    }
+
+    // 获取智谱模型选项
+    getZhipuModelOptions() {
+        return `
+            <option value="glm-4v-flash">glm-4v-flash</option>
+            <option value="THUDM/glm-4-9b-chat">GLM-4-9B-Chat</option>
+        `;
+    }
+
+    // 获取当前模型值
+    getCurrentModelValue() {
+        switch(this.currentModel) {
+            case 'gpt':
+                return this.gptConfig.model;
+            case 'zhipu':
+                return this.zhipuConfig.model;
+            // ... 其他模型
+            default:
+                return '';
+        }
     }
 }
 
