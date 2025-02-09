@@ -298,16 +298,10 @@ class AIChatApp {
 
         // 修改 DeepSeek 配置
         this.deepseekConfig = {
+            apiKey: 'sk-hyeudoewxhrzksdcsfbyzkprbocvedmdhydzzmmpuohxxphs',
+            baseUrl: 'https://api.siliconflow.cn/v1/chat/completions',
+            model: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
             models: {
-                // 原有的 V3 模型 - 使用 pearktrue API
-                'deepseek-v3': {
-                    name: 'DeepSeek V3',
-                    maxTokens: 4096,
-                    supportImage: false,
-                    apiUrl: 'https://api.pearktrue.cn/api/deepseek/',
-                    description: 'DeepSeek-V3为自研MoE模型，671B参数，激活37B，在14.8T token上进行了预训练。'
-                },
-                // 新增的推理模型 - 使用 SiliconFlow API
                 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B': {
                     name: 'DeepSeek-R1-Distill-Qwen-7B',
                     maxTokens: 4096,
@@ -315,12 +309,9 @@ class AIChatApp {
                     supportReasoning: true,
                     supportMultiLingual: true,
                     supportStructuredOutput: true,
-                    apiKey: 'sk-hyeudoewxhrzksdcsfbyzkprbocvedmdhydzzmmpuohxxphs',
-                    baseUrl: 'https://api.siliconflow.cn/v1/chat/completions',
                     description: 'DeepSeek-R1-Distill-Qwen-7B 是一个专注于推理能力的模型，基于 Qwen-7B 进行蒸馏优化。'
                 }
-            },
-            model: 'deepseek-v3' // 默认使用 V3 模型
+            }
         };
 
         // 添加 Marco-o1 配置
@@ -382,13 +373,50 @@ class AIChatApp {
     }
 
     initializeMarked() {
+        const renderer = new marked.Renderer();
+        
+        // 统一的代码块渲染
+        renderer.code = (code, language) => {
+            const blockId = `code-block-${Math.random().toString(36).substr(2, 9)}`;
+            const container = document.createElement('div');
+            container.className = 'code-block';
+            container.id = blockId;
+
+            const pre = document.createElement('pre');
+            const codeElement = document.createElement('code');
+            codeElement.className = language ? `language-${language}` : '';
+            codeElement.textContent = code;
+
+            // 添加复制按钮
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(code);
+                copyBtn.innerHTML = '<i class="fas fa-check"></i> 已复制';
+            setTimeout(() => {
+                    copyBtn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+            }, 2000);
+        };
+
+            pre.appendChild(codeElement);
+            container.appendChild(copyBtn);
+            container.appendChild(pre);
+
+            return container.outerHTML;
+        };
+
+        // 配置 marked 选项
         marked.setOptions({
-            highlight: function(code, lang) {
-                if (lang && hljs.getLanguage(lang)) {
-                    return hljs.highlight(code, { language: lang }).value;
+            renderer: renderer,
+            highlight: (code, language) => {
+                if (language && hljs.getLanguage(language)) {
+                    return hljs.highlight(code, { language }).value;
                 }
-                return code;
-            }
+                return hljs.highlightAuto(code).value;
+            },
+            breaks: true,
+            gfm: true
         });
     }
 
@@ -544,10 +572,10 @@ class AIChatApp {
                 ` : ''}
                 <div class="suggestion-grid">
                     ${this.deepseekConfig.model === 'deepseek-v3' ? `
-                        <button class="suggestion-btn">做个自我介绍</button>
-                        <button class="suggestion-btn">帮我写一段python代码</button>
-                        <button class="suggestion-btn">解释人工智能</button>
-                        <button class="suggestion-btn">生成小红书文案</button>
+                    <button class="suggestion-btn">做个自我介绍</button>
+                    <button class="suggestion-btn">帮我写一段python代码</button>
+                    <button class="suggestion-btn">解释人工智能</button>
+                    <button class="suggestion-btn">生成小红书文案</button>
                     ` : `
                         <button class="suggestion-btn">分析一个数学问题</button>
                         <button class="suggestion-btn">解释一个复杂概念</button>
@@ -814,7 +842,7 @@ class AIChatApp {
         
         // 取消当前正在进行的请求
         this.cancelCurrentRequest();
-        
+
         // 更新当前模型
         this.currentModel = model;
         
@@ -824,15 +852,15 @@ class AIChatApp {
             currentModelSelect.style.display = 'none';
             
             // 根据不同模型显示对应的选择器
-            switch(model) {
-                case 'gpt':
+        switch(model) {
+            case 'gpt':
                     currentModelSelect.innerHTML = this.getGPTModelOptions();
                     currentModelSelect.style.display = 'block';
-                    break;
-                case 'zhipu':
+                break;
+            case 'zhipu':
                     currentModelSelect.innerHTML = this.getZhipuModelOptions();
                     currentModelSelect.style.display = 'block';
-                    break;
+                break;
                 // ... 其他模型的选项
             }
             
@@ -1136,27 +1164,20 @@ class AIChatApp {
         }
     }
 
-    addMessageToChat(sender, message) {
+    async addMessageToChat(sender, message) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', `${sender}-message`);
         
-        // 加头像
+        // 只为 AI 消息添加头像
+        if (sender !== 'user') {
         const avatar = document.createElement('div');
         avatar.className = 'avatar';
         const avatarImg = document.createElement('img');
-        
-        // 根发送者和当前模型选择正确的头像
-        if (sender === 'user') {
-            avatarImg.src = this.avatars.user;
-        } else if (sender === 'ai') {
             avatarImg.src = this.avatars.ai[this.currentModel];
-        } else {
-            avatarImg.src = this.avatars.system;
-        }
-        
-        avatarImg.alt = `${sender} avatar`;
+            avatarImg.alt = 'AI avatar';
         avatar.appendChild(avatarImg);
         messageDiv.appendChild(avatar);
+        }
         
         const messageContent = document.createElement('div');
         messageContent.classList.add('message-content');
@@ -1164,11 +1185,23 @@ class AIChatApp {
         if (sender === 'user') {
             messageContent.textContent = message;
         } else {
-            messageContent.innerHTML = `<div class="loading">正在思考...</div>`;
-            setTimeout(() => {
-                // 使用 marked 处理 Markdown
-                const htmlContent = marked.parse(message);
-                messageContent.innerHTML = htmlContent;
+            // 检查是否是代码示例
+            if (message.startsWith('```') && message.includes('\n')) {
+                // 处理代码块
+                const codeBlock = this.createCodeBlock(message);
+                messageContent.appendChild(codeBlock);
+            } else {
+                // 解析思考过程和输出结果
+                const parts = this.parseThoughtAndOutput(message);
+                
+                if (parts.thought) {
+                    const thoughtDiv = this.createThoughtSection(parts.thought);
+                    messageContent.appendChild(thoughtDiv);
+                }
+                
+                const outputDiv = this.createOutputSection(parts.output || message);
+                messageContent.appendChild(outputDiv);
+            }
 
                 // 渲染数学公式
                 renderMathInElement(messageContent, {
@@ -1185,7 +1218,6 @@ class AIChatApp {
                 messageContent.querySelectorAll('pre code').forEach((block) => {
                     hljs.highlightElement(block);
                 });
-            }, 500);
         }
         
         messageDiv.appendChild(messageContent);
@@ -1314,7 +1346,7 @@ class AIChatApp {
                 console.error('API Error Response:', errorData);
                 
                 if (response.status === 401) {
-                    this.addSystemMessage('API认证失败，请检查API密钥是否正确���是否过期');
+                    this.addSystemMessage('API认证失败，请检查API密钥是否正确是否过期');
                     throw new Error('API认证失败');
                 }
                 
@@ -1335,7 +1367,6 @@ class AIChatApp {
 
             const messageContent = document.createElement('div');
             messageContent.classList.add('message-content');
-            messageContent.innerHTML = '<div class="loading">正在思考...</div>';
             messageDiv.appendChild(messageContent);
             this.chatHistory.appendChild(messageDiv);
 
@@ -1360,8 +1391,21 @@ class AIChatApp {
                                 const content = data.choices[0].delta.content;
                                 fullContent += content;
                                 
-                                const htmlContent = marked.parse(fullContent);
-                                messageContent.innerHTML = htmlContent;
+                                // 使用打字机效果显示新内容
+                                messageContent.textContent = fullContent;
+                                this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+                            }
+                        } catch (e) {
+                            if (!line.includes('[DONE]')) {
+                                console.error('解析响应数据出错:', e);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 完成后渲染 markdown 和数学公式
+            messageContent.innerHTML = marked.parse(fullContent);
 
                                 // 渲染数学公式
                                 renderMathInElement(messageContent, {
@@ -1378,17 +1422,6 @@ class AIChatApp {
                                 messageContent.querySelectorAll('pre code').forEach((block) => {
                                     hljs.highlightElement(block);
                                 });
-
-                                this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
-                            }
-                        } catch (e) {
-                            if (!line.includes('[DONE]')) {
-                                console.error('解析响应数据出错:', e);
-                            }
-                        }
-                    }
-                }
-            }
 
             // 保存对话史
             if (typeof message === 'string') {
@@ -1416,7 +1449,7 @@ class AIChatApp {
     async getGPTResponse(message) {
         try {
             this.sendBtn.classList.add('loading');
-
+            
             // 构建请求消息
             let messages = [];
             
@@ -1427,9 +1460,9 @@ class AIChatApp {
 
             // 添加当前消息
             messages.push({
-                role: "user",
-                content: message
-            });
+                    role: "user",
+                    content: message
+                });
 
             // 发送请求
             const response = await fetch(this.gptConfig.baseUrl, {
@@ -1476,31 +1509,31 @@ class AIChatApp {
             messageContent.classList.add('message-content');
             messageContent.innerHTML = marked.parse(aiResponse);
 
-            // 渲染数学公式
-            renderMathInElement(messageContent, {
-                delimiters: [
-                    {left: '$$', right: '$$', display: true},
-                    {left: '$', right: '$', display: false},
-                    {left: '\\[', right: '\\]', display: true},
-                    {left: '\\(', right: '\\)', display: false}
-                ],
-                throwOnError: false
-            });
+                                // 渲染数学公式
+                                renderMathInElement(messageContent, {
+                                    delimiters: [
+                                        {left: '$$', right: '$$', display: true},
+                                        {left: '$', right: '$', display: false},
+                                        {left: '\\[', right: '\\]', display: true},
+                                        {left: '\\(', right: '\\)', display: false}
+                                    ],
+                                    throwOnError: false
+                                });
 
-            // 高亮代码块
-            messageContent.querySelectorAll('pre code').forEach((block) => {
-                hljs.highlightElement(block);
-            });
+                                // 高亮代码块
+                                messageContent.querySelectorAll('pre code').forEach((block) => {
+                                    hljs.highlightElement(block);
+                                });
 
             messageDiv.appendChild(messageContent);
             this.chatHistory.appendChild(messageDiv);
-            this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+                                this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
 
             // 保存对话历史
-            this.conversationHistory.push({
-                role: "user",
-                content: message
-            });
+                this.conversationHistory.push({
+                    role: "user",
+                    content: message
+                });
 
             this.conversationHistory.push({
                 role: "assistant",
@@ -1556,8 +1589,7 @@ class AIChatApp {
                 throw new Error(`HTTP error! status: ${response.status}, message: ${JSON.stringify(errorData)}`);
             }
 
-            // 处理流式响应...
-            // 这部分代码与 getGPTResponse 中的流式响应处理相同
+            // 创建消息元素
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', 'ai-message');
             
@@ -1571,7 +1603,6 @@ class AIChatApp {
 
             const messageContent = document.createElement('div');
             messageContent.classList.add('message-content');
-            messageContent.innerHTML = '<div class="loading">正在思考...</div>';
             messageDiv.appendChild(messageContent);
             this.chatHistory.appendChild(messageDiv);
 
@@ -1596,8 +1627,21 @@ class AIChatApp {
                                 const content = data.choices[0].delta.content;
                                 fullContent += content;
                                 
-                                const htmlContent = marked.parse(fullContent);
-                                messageContent.innerHTML = htmlContent;
+                                // 使用打字机效果显示新内容
+                                messageContent.textContent = fullContent;
+                                this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+                            }
+                        } catch (e) {
+                            if (!line.includes('[DONE]')) {
+                                console.error('解析响应数据出错:', e);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 完成后渲染 markdown 和数学公式
+            messageContent.innerHTML = marked.parse(fullContent);
 
                                 // 渲染数学公式
                                 renderMathInElement(messageContent, {
@@ -1614,17 +1658,6 @@ class AIChatApp {
                                 messageContent.querySelectorAll('pre code').forEach((block) => {
                                     hljs.highlightElement(block);
                                 });
-
-                                this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
-                            }
-                        } catch (e) {
-                            if (!line.includes('[DONE]')) {
-                                console.error('解析响应数据出错:', e);
-                            }
-                        }
-                    }
-                }
-            }
 
             // 保存对话历史
             this.conversationHistory.push({
@@ -2039,80 +2072,151 @@ class AIChatApp {
         
         if (splashScreen && appContainer) {
             // 1.5秒后开始淡出动画
-            setTimeout(() => {
+        setTimeout(() => {
                 splashScreen.style.opacity = '0';
                 splashScreen.style.transition = 'opacity 0.5s ease';
-                appContainer.style.opacity = '1';
-                appContainer.style.transition = 'opacity 0.5s ease';
+            appContainer.style.opacity = '1';
+            appContainer.style.transition = 'opacity 0.5s ease';
                 
                 // 动画结束后移除开屏页面
                 setTimeout(() => {
                     splashScreen.remove();
                 }, 500);
-            }, 1500);
+        }, 1500);
         }
     }
 
     async getDeepSeekResponse(message, systemPrompt) {
         try {
             this.sendBtn.classList.add('loading');
-            const currentModel = this.deepseekConfig.models[this.deepseekConfig.model];
 
-            // 根据不同模型使用不同的请求方式
-            if (this.deepseekConfig.model === 'deepseek-v3') {
-                // V3 模型的请求处理
-                const response = await fetch(currentModel.apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ messages: [{ role: "user", content: message }] })
-                });
+            // 构建请求消息
+            let messages = [{
+                role: "system",
+                content: "你是一个专业的AI助手，请始终使用中文回复。"
+            }];
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                if (data.code !== 200) {
-                    throw new Error(data.msg || 'DeepSeek API 响应错误');
-                }
-
-                return this.handleDeepSeekResponse(data.message, message);
-            } else {
-                // R1-Distill 模型的请求处理
-                let messages = [];
+            // 添加历史对话
                 if (this.conversationHistory.length > 0) {
                     messages = messages.concat(this.conversationHistory.slice(-10));
                 }
 
-                const userMessage = `让我们一步一步思考这个问题：\n${message}\n请给出详细的推理过程和最终结论。`;
+            // 添加当前消息
                 messages.push({
-                    role: "user",
-                    content: userMessage
-                });
+                role: "user",
+                content: message
+            });
 
-                const response = await fetch(currentModel.baseUrl, {
+            // 构建请求体
+            const requestBody = {
+                model: this.deepseekConfig.model,
+                messages: messages,
+                temperature: 0.7,
+                max_tokens: 2000,
+                stream: false
+            };
+
+            // 发送请求
+            const response = await fetch(this.deepseekConfig.baseUrl, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${currentModel.apiKey}`,
+                    'Authorization': `Bearer ${this.deepseekConfig.apiKey}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        model: this.deepseekConfig.model,
-                        messages: messages,
-                        temperature: 0.7,
-                        max_tokens: currentModel.maxTokens,
-                        stream: true
-                    })
+                body: JSON.stringify(requestBody)
                 });
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                return this.handleDeepSeekStreamResponse(response, message);
+            const data = await response.json();
+            const reasoningContent = data.choices[0].message.reasoning_content || '';
+            const finalContent = data.choices[0].message.content;
+
+            // 创建消息元素
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', 'ai-message');
+            
+            // 添加头像
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            const avatarImg = document.createElement('img');
+            avatarImg.src = this.avatars.ai[this.currentModel];
+            avatarImg.alt = 'AI avatar';
+            avatar.appendChild(avatarImg);
+            messageDiv.appendChild(avatar);
+
+            // 添加消息内容
+            const messageContent = document.createElement('div');
+            messageContent.classList.add('message-content');
+
+            // 如果有推理内容，添加思考过程区块
+            if (reasoningContent) {
+                const thoughtDiv = document.createElement('div');
+                thoughtDiv.className = 'thought-chain';
+                
+                const thoughtHeader = document.createElement('div');
+                thoughtHeader.className = 'thought-header';
+                thoughtHeader.textContent = '思考过程';
+                thoughtDiv.appendChild(thoughtHeader);
+                
+                const thoughtBody = document.createElement('div');
+                thoughtBody.innerHTML = marked.parse(reasoningContent);
+                thoughtDiv.appendChild(thoughtBody);
+                
+                messageContent.appendChild(thoughtDiv);
             }
+
+            // 添加输出结果区块
+            const outputDiv = document.createElement('div');
+            outputDiv.className = 'output-result';
+            
+            const outputHeader = document.createElement('div');
+            outputHeader.className = 'output-header';
+            outputHeader.textContent = '输出结果';
+            outputDiv.appendChild(outputHeader);
+            
+            const outputBody = document.createElement('div');
+            outputBody.innerHTML = marked.parse(finalContent);
+            outputDiv.appendChild(outputBody);
+            
+            messageContent.appendChild(outputDiv);
+
+            // 渲染数学公式
+            renderMathInElement(messageContent, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\[', right: '\\]', display: true},
+                    {left: '\\(', right: '\\)', display: false}
+                ],
+                throwOnError: false
+            });
+
+            // 高亮代码块
+            messageContent.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+
+            messageDiv.appendChild(messageContent);
+            this.chatHistory.appendChild(messageDiv);
+            this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+
+            // 保存对话历史
+            this.conversationHistory.push({
+                role: "user",
+                content: message
+            });
+
+            this.conversationHistory.push({
+                role: "assistant",
+                content: finalContent,
+                reasoning_content: reasoningContent
+            });
+
+            return finalContent;
+
         } catch (error) {
             console.error('DeepSeek API调用错误:', error);
             this.addSystemMessage(`API调用失败: ${error.message}`);
@@ -2132,19 +2236,19 @@ class AIChatApp {
         });
     }
 
-    // 添加 Marco-o1 响应处理方法
-    async getMarcoResponse(message, systemPrompt) {
+    // 修改 getMarcoResponse 方法
+    async getMarcoResponse(message) {
         try {
             this.sendBtn.classList.add('loading');
 
-            // 构建请求消息
-            let messages = [];
-            if (systemPrompt) {
-                messages.push({
+            // 使用新的系统提示词
+            let messages = [{
                     role: "system",
-                    content: systemPrompt.content  // 修改这里，直接使用 content
-                });
-            }
+                content: `你是一个经过良好训练的AI助手，你的名字是Marco-o1.你的输出该使用markdown格式
+## 重要！！！！！
+当你回答问题时，你的思考应该在<Thought>内完成，<Output>内输出你的结果。
+<Thought>应该尽可能是中文，数学应该使用markdown格式，<Output>内的输出需要遵循用户输入的语言。`
+            }];
 
             // 添加历史对话
             if (this.conversationHistory.length > 0) {
@@ -2163,23 +2267,9 @@ class AIChatApp {
                 messages: messages,
                 temperature: 0.7,
                 max_tokens: 2000,
-                // 添加必要的参数
-                stream: false,
-                top_p: 0.95,
-                frequency_penalty: 0,
-                presence_penalty: 0
+                stream: false
             };
 
-            console.log('Marco-o1 Request:', {
-                url: this.marcoConfig.baseUrl,
-                headers: {
-                    'Authorization': `Bearer ${this.marcoConfig.apiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: requestBody
-            });
-
-            // 发送请求
             const response = await fetch(this.marcoConfig.baseUrl, {
                 method: 'POST',
                 headers: {
@@ -2190,53 +2280,18 @@ class AIChatApp {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                console.error('Marco-o1 API Error:', errorData);
-                throw new Error(`HTTP error! status: ${response.status}, message: ${JSON.stringify(errorData)}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
-            console.log('Marco-o1 Response:', data);
+            const content = data.choices[0].message.content;
+
+            // 解析<Thought>和<Output>标签内容
+            const thoughtMatch = content.match(/<Thought>([\s\S]*?)<\/Thought>/);
+            const outputMatch = content.match(/<Output>([\s\S]*?)<\/Output>/);
             
-            let aiResponse = data.choices[0].message.content;
-
-            // 解析思考链和输出结果
-            let thoughtContent = '';
-            let outputContent = '';
-
-            // 提取<Thought>标签内容
-            const thoughtMatch = aiResponse.match(/<Thought>(.*?)<\/Thought>/s);
-            if (thoughtMatch) {
-                thoughtContent = thoughtMatch[1].trim();
-            }
-
-            // 提取<Output>标签内容
-            const outputMatch = aiResponse.match(/<Output>(.*?)<\/Output>/s);
-            if (outputMatch) {
-                outputContent = outputMatch[1].trim();
-            }
-
-            // 构建格式化的响应
-            let formattedResponse = '';
-            if (thoughtContent) {
-                // 处理思考过程中的代码块
-                thoughtContent = this.formatCodeBlocks(thoughtContent);
-                formattedResponse += `<div class="thought-chain">
-                    <div class="thought-header">💭 思考过程</div>
-                    ${thoughtContent}
-                </div>\n\n`;
-            }
-            if (outputContent) {
-                // 处理输出结果中的代码块
-                outputContent = this.formatCodeBlocks(outputContent);
-                formattedResponse += `<div class="output-result">
-                    <div class="output-header">🤖 输出结果</div>
-                    ${outputContent}
-                </div>`;
-            }
-            if (!formattedResponse) {
-                formattedResponse = aiResponse; // 如果没有标签，使用原始响应
-            }
+            const reasoningContent = thoughtMatch ? thoughtMatch[1].trim() : '';
+            const finalContent = outputMatch ? outputMatch[1].trim() : content;
 
             // 创建消息元素
             const messageDiv = document.createElement('div');
@@ -2254,24 +2309,38 @@ class AIChatApp {
             // 添加消息内容
             const messageContent = document.createElement('div');
             messageContent.classList.add('message-content');
-            messageContent.innerHTML = '<div class="loading">正在思考...</div>';
-            messageDiv.appendChild(messageContent);
-            this.chatHistory.appendChild(messageDiv);
 
-            // 修改 marked 配置以支持语言标识
-            const renderer = new marked.Renderer();
-            renderer.code = (code, language) => {
-                const validLanguage = hljs.getLanguage(language) ? language : '';
-                const highlighted = validLanguage ? 
-                    hljs.highlight(code, { language: validLanguage }).value : 
-                    hljs.highlightAuto(code).value;
+            // 如果有思考过程，添加思考过程区块
+            if (reasoningContent) {
+                const thoughtDiv = document.createElement('div');
+                thoughtDiv.className = 'thought-chain';
                 
-                return `<pre><code class="hljs language-${validLanguage}">${highlighted}</code></pre>`;
-            };
+                const thoughtHeader = document.createElement('div');
+                thoughtHeader.className = 'thought-header';
+                thoughtHeader.textContent = '思考过程';
+                thoughtDiv.appendChild(thoughtHeader);
+                
+                const thoughtBody = document.createElement('div');
+                thoughtBody.innerHTML = marked.parse(reasoningContent);
+                thoughtDiv.appendChild(thoughtBody);
+                
+                messageContent.appendChild(thoughtDiv);
+            }
 
-            // 使用配置的 renderer
-            const htmlContent = marked.parse(formattedResponse, { renderer });
-            messageContent.innerHTML = htmlContent;
+            // 添加输出结果区块
+            const outputDiv = document.createElement('div');
+            outputDiv.className = 'output-result';
+            
+            const outputHeader = document.createElement('div');
+            outputHeader.className = 'output-header';
+            outputHeader.textContent = '输出结果';
+            outputDiv.appendChild(outputHeader);
+            
+            const outputBody = document.createElement('div');
+            outputBody.innerHTML = marked.parse(finalContent);
+            outputDiv.appendChild(outputBody);
+            
+            messageContent.appendChild(outputDiv);
 
             // 渲染数学公式
             renderMathInElement(messageContent, {
@@ -2289,7 +2358,8 @@ class AIChatApp {
                 hljs.highlightElement(block);
             });
 
-            // 滚动到底部
+            messageDiv.appendChild(messageContent);
+            this.chatHistory.appendChild(messageDiv);
             this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
 
             // 保存对话历史
@@ -2300,13 +2370,14 @@ class AIChatApp {
 
             this.conversationHistory.push({
                 role: "assistant",
-                content: aiResponse
+                content: finalContent,
+                reasoning_content: reasoningContent
             });
 
-            return aiResponse;
+            return finalContent;
 
         } catch (error) {
-            console.error('Marco-o1 API调用错误:', error);
+            console.error('Marco API调用错误:', error);
             this.addSystemMessage(`API调用失败: ${error.message}`);
             throw error;
         } finally {
@@ -2319,14 +2390,24 @@ class AIChatApp {
         try {
             this.sendBtn.classList.add('loading');
 
-            // 构建请求消息
-            let messages = [];
-            if (systemPrompt) {
-                messages.push({
+            // 类似的修改系统提示词
+            const defaultSystemPrompt = {
                     role: "system",
-                    content: systemPrompt.content
-                });
-            }
+                content: `你是一个专业的AI助手，请始终使用中文回复。在回答问题时，请按照以下格式输出：
+
+思考过程：
+分析问题并列出思考步骤，说明推理过程。
+
+输出结果：
+给出最终答案或解决方案。如果包含代码，请使用标准的markdown代码块格式：
+\`\`\`语言名称
+代码内容
+\`\`\`
+`
+            };
+
+            // 构建请求消息
+            let messages = [defaultSystemPrompt];
 
             // 添加历史对话
             if (this.conversationHistory.length > 0) {
@@ -2492,8 +2573,24 @@ class AIChatApp {
         try {
             this.sendBtn.classList.add('loading');
 
+            // 类似的修改系统提示词
+            const defaultSystemPrompt = {
+                role: "system",
+                content: `你是一个专业的AI助手，请始终使用中文回复。在回答问题时，请按照以下格式输出：
+
+思考过程：
+分析问题并列出思考步骤，说明推理过程。
+
+输出结果：
+给出最终答案或解决方案。如果包含代码，请使用标准的markdown代码块格式：
+\`\`\`语言名称
+代码内容
+\`\`\`
+`
+            };
+
             // 构建请求消息
-            let messages = [systemPrompt];
+            let messages = [defaultSystemPrompt];
 
             // 添加历史对话
             if (this.conversationHistory.length > 0) {
@@ -2879,6 +2976,338 @@ class AIChatApp {
             // ... 其他模型
             default:
                 return '';
+        }
+    }
+
+    // 添加打字机效果方法
+    async typeWriter(element, text, speed = 20) {
+        let index = 0;
+        element.textContent = '';
+        
+        return new Promise((resolve) => {
+            function type() {
+                if (index < text.length) {
+                    element.textContent += text.charAt(index);
+                    index++;
+                    setTimeout(type, speed);
+                } else {
+                    resolve();
+                }
+            }
+            type();
+        });
+    }
+
+    // 修改流式响应处理
+    async handleStreamResponse(response, messageContent) {
+        let fullContent = '';
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        // 创建初始容器
+        const thoughtDiv = this.createThoughtSection('');
+        const outputDiv = this.createOutputSection('');
+        messageContent.appendChild(thoughtDiv);
+        messageContent.appendChild(outputDiv);
+
+        const thoughtBody = thoughtDiv.querySelector('.thought-chain > div:last-child');
+        const outputBody = outputDiv.querySelector('.output-result > div:last-child');
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        if (line.includes('[DONE]')) continue;
+
+                        const data = JSON.parse(line.slice(6));
+                        if (data.choices?.[0]?.delta?.content) {
+                            const content = data.choices[0].delta.content;
+                            fullContent += content;
+                            
+                            // 更新显示内容
+                            const parts = this.parseThoughtAndOutput(fullContent);
+                            if (parts.thought) {
+                                thoughtBody.innerHTML = marked.parse(parts.thought);
+                                if (parts.output) {
+                                    outputBody.innerHTML = marked.parse(parts.output);
+                                }
+                            } else {
+                                outputBody.innerHTML = marked.parse(fullContent);
+                            }
+                            
+                            this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+                        }
+                    } catch (e) {
+                        if (!line.includes('[DONE]')) {
+                            console.error('解析响应数据出错:', e);
+                        }
+                    }
+                }
+            }
+        }
+
+        return fullContent;
+    }
+
+    // 添加辅助方法来解析思考过程和输出结果
+    parseThoughtAndOutput(message) {
+        const thoughtMatch = message.match(/思考过程：([\s\S]*?)(?=输出结果：|$)/);
+        const outputMatch = message.match(/输出结果：([\s\S]*)/);
+        
+        return {
+            thought: thoughtMatch ? thoughtMatch[1].trim() : null,
+            output: outputMatch ? outputMatch[1].trim() : null
+        };
+    }
+
+    // 创建思考过程区块
+    createThoughtSection(content) {
+        const thoughtDiv = document.createElement('div');
+        thoughtDiv.className = 'thought-chain';
+        
+        const thoughtHeader = document.createElement('div');
+        thoughtHeader.className = 'thought-header';
+        thoughtHeader.textContent = '思考过程';
+        thoughtDiv.appendChild(thoughtHeader);
+        
+        const thoughtBody = document.createElement('div');
+        thoughtBody.innerHTML = marked.parse(content);
+        thoughtDiv.appendChild(thoughtBody);
+        
+        return thoughtDiv;
+    }
+
+    // 创建输出结果区块
+    createOutputSection(content) {
+        const outputDiv = document.createElement('div');
+        outputDiv.className = 'output-result';
+        
+        const outputHeader = document.createElement('div');
+        outputHeader.className = 'output-header';
+        outputHeader.textContent = '输出结果';
+        outputDiv.appendChild(outputHeader);
+        
+        const outputBody = document.createElement('div');
+        outputBody.innerHTML = marked.parse(content);
+        outputDiv.appendChild(outputBody);
+        
+        return outputDiv;
+    }
+
+    // 创建代码块
+    createCodeBlock(code, language) {
+        const blockId = `code-block-${Math.random().toString(36).substr(2, 9)}`;
+        const container = document.createElement('div');
+        container.className = 'code-block';
+        container.id = blockId;
+
+        const pre = document.createElement('pre');
+        const codeElement = document.createElement('code');
+        codeElement.className = language ? `language-${language}` : '';
+        codeElement.textContent = code;
+
+        // 添加复制按钮
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+        copyBtn.onclick = () => {
+            navigator.clipboard.writeText(code);
+            copyBtn.innerHTML = '<i class="fas fa-check"></i> 已复制';
+            setTimeout(() => {
+                copyBtn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+            }, 2000);
+        };
+
+        pre.appendChild(codeElement);
+        container.appendChild(copyBtn);
+        container.appendChild(pre);
+
+        return container;
+    }
+
+    // 修改图片消息处理方法
+    async handleImageMessage(message, imageUrl) {
+        try {
+            // 避免重复添加用户消息
+            if (!this.isSystemMessage) {
+                // 创建用户消息元素
+                const userMessageDiv = document.createElement('div');
+                userMessageDiv.classList.add('message', 'user-message');
+                
+                const userMessageContent = document.createElement('div');
+                userMessageContent.classList.add('message-content');
+                
+                // 如果有文本消息，添加文本
+                if (message) {
+                    const textDiv = document.createElement('div');
+                    textDiv.textContent = message;
+                    userMessageContent.appendChild(textDiv);
+                }
+                
+                // 如果有图片，添加图片
+                if (imageUrl) {
+                    const imgDiv = document.createElement('div');
+                    imgDiv.className = 'image-container';
+                    const img = document.createElement('img');
+                    img.src = imageUrl;
+                    img.alt = '用户上传的图片';
+                    img.onclick = () => this.showImageViewer(imageUrl);
+                    imgDiv.appendChild(img);
+                    userMessageContent.appendChild(imgDiv);
+                }
+                
+                userMessageDiv.appendChild(userMessageContent);
+                this.chatHistory.appendChild(userMessageDiv);
+            }
+
+            // 根据当前模型处理图片消息
+            switch (this.currentModel) {
+                case 'zhipu':
+                    return await this.getZhipuResponse(message, imageUrl);
+                // ... 其他图片模型的处理 ...
+                default:
+                    throw new Error('当前模型不支持图片处理');
+            }
+        } catch (error) {
+            console.error('处理图片消息时出错:', error);
+            this.addSystemMessage(`处理图片失败: ${error.message}`);
+            throw error;
+        }
+    }
+
+    // 修改文件上传处理方法
+    async handleFileUpload(file) {
+        try {
+            this.sendBtn.classList.add('loading');
+            const imageUrl = await this.uploadImage(file);
+            
+            // 获取当前输入框的文本
+            const message = this.userInput.value.trim();
+            
+            // 清空输入框
+            this.userInput.value = '';
+            this.adjustTextareaHeight();
+            
+            // 处理图片消息
+            await this.handleImageMessage(message, imageUrl);
+            
+            // 保存到对话历史
+            this.conversationHistory.push({
+                role: "user",
+                content: message,
+                image_url: imageUrl
+            });
+            
+        } catch (error) {
+            console.error('文件上传失败:', error);
+            this.addSystemMessage(`文件上传失败: ${error.message}`);
+        } finally {
+            this.sendBtn.classList.remove('loading');
+        }
+    }
+
+    // 修改 getFluxResponse 方法
+    async getFluxResponse(message) {
+        try {
+            this.sendBtn.classList.add('loading');
+
+            // 构建优化后的提示词
+            const enhancedPrompt = `请根据以下描述生成图片：${message}
+风格要求：高质量、细节丰富、写实风格
+其他要求：构图合理、光影自然、色彩协调`;
+
+            // 构建请求消息
+            let messages = [{
+                role: "system",
+                content: "你是一个专业的图像生成助手，请仔细理解用户的需求，生成符合要求的图片。"
+            }];
+
+            // 添加用户消息
+            messages.push({
+                role: "user",
+                content: enhancedPrompt
+            });
+
+            // 构建请求体
+            const requestBody = {
+                model: this.fluxConfig.model,
+                messages: messages,
+                temperature: 0.8,
+                max_tokens: 1000,
+                stream: false
+            };
+
+            const response = await fetch(this.fluxConfig.baseUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.fluxConfig.apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const imageUrl = data.choices[0].message.content;
+
+            // 创建 AI 回复消息
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', 'ai-message');
+
+            // 添加头像
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            const avatarImg = document.createElement('img');
+            avatarImg.src = this.avatars.ai[this.currentModel];
+            avatarImg.alt = 'AI avatar';
+            avatar.appendChild(avatarImg);
+            messageDiv.appendChild(avatar);
+
+            // 添加图片内容
+            const messageContent = document.createElement('div');
+            messageContent.classList.add('message-content');
+
+            const imgContainer = document.createElement('div');
+            imgContainer.className = 'image-container';
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.alt = '生成的图片';
+            img.onclick = () => this.showImageViewer(imageUrl);
+            imgContainer.appendChild(img);
+            messageContent.appendChild(imgContainer);
+
+            messageDiv.appendChild(messageContent);
+            this.chatHistory.appendChild(messageDiv);
+            this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+
+            // 保存对话历史
+            this.conversationHistory.push({
+                role: "user",
+                content: message
+            });
+
+            this.conversationHistory.push({
+                role: "assistant",
+                content: imageUrl
+            });
+
+            return imageUrl;
+
+        } catch (error) {
+            console.error('Flux API调用错误:', error);
+            this.addSystemMessage(`API调用失败: ${error.message}`);
+            throw error;
+        } finally {
+            this.sendBtn.classList.remove('loading');
         }
     }
 }

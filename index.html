@@ -3,15 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>清言</title>
+    <title>AI Chat</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/KaTeX/0.15.2/katex.min.css">
+    <script src="https://lf9-cdn-tos.bytecdntp.com/cdn/expire-1-M/KaTeX/0.15.2/katex.min.js"></script>
+    <script src="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/KaTeX/0.15.2/contrib/auto-render.min.js"></script>
+    <script src="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/marked/4.0.2/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/x86asm.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
 </head>
 <body>
     <!-- 开屏页面 -->
@@ -31,7 +38,9 @@
             <div class="model-list">
                 <!-- GPT 模型 -->
                 <div class="model-item" data-model="gpt">
-                    <img src="https://img.icons8.com/?size=100&id=FBO05Dys9QCg&format=png&color=000000" alt="GPT">
+                    <div class="icon-container">
+                        <img src="https://img.icons8.com/?size=100&id=FBO05Dys9QCg&format=png&color=000000" alt="GPT">
+                    </div>
                     <span class="model-name">GPT</span>
                 </div>
                 <div class="model-sub-select gpt-model-selector">
@@ -49,7 +58,9 @@
 
                 <!-- 智谱AI模型 -->
                 <div class="model-item" data-model="zhipu">
-                    <img src="https://chatglm.cn/img/logo-collapse.d00ef130.svg" alt="智谱AI">
+                    <div class="icon-container">
+                        <img src="https://chatglm.cn/img/logo-collapse.d00ef130.svg" alt="智谱AI">
+                    </div>
                     <span class="model-name">智谱AI</span>
                 </div>
                 <div class="model-sub-select zhipu-model-selector">
@@ -61,14 +72,10 @@
 
                 <!-- 通义千问 -->
                 <div class="model-item" data-model="qwen">
-                    <img src="https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/Tongyi.svg" alt="通义千问">
+                    <div class="icon-container">
+                        <img src="https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/Tongyi.svg" alt="通义千问">
+                    </div>
                     <span class="model-name">通义千问</span>
-                </div>
-                <div class="model-sub-select qwen-model-selector">
-                    <select id="qwenModelSelect">
-                        <option value="qwen-max">Qwen Max</option>
-                        <option value="qwen-plus">Qwen Plus</option>
-                    </select>
                 </div>
 
                 <!-- FLUX -->
@@ -79,15 +86,10 @@
 
                 <!-- Stable Diffusion -->
                 <div class="model-item" data-model="sd">
-                    <img src="https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/Stability.svg" alt="Stable Diffusion">
+                    <div class="icon-container">
+                        <img src="https://sf-maas-uat-prod.oss-cn-shanghai.aliyuncs.com/Model_LOGO/Stability.svg" alt="Stable Diffusion">
+                    </div>
                     <span class="model-name">Stable Diffusion</span>
-                </div>
-                <div class="model-sub-select sd-model-selector">
-                    <select id="sdModelSelect">
-                        <option value="sd-turbo">SD Turbo</option>
-                        <option value="sdxl">SDXL</option>
-                        <option value="sd-xl-turbo">SD-XL Turbo</option>
-                    </select>
                 </div>
 
                 <!-- CogVideoX -->
@@ -130,7 +132,14 @@
         <div class="main-content">
             <div class="chat-container">
                 <div class="chat-messages" id="chatHistory">
-                    <!-- 欢迎界面通过JavaScript动态添加 -->
+                    <div class="message ai-message">
+                        <div class="avatar">
+                            <img src="https://chatglm.cn/img/logo-collapse.d00ef130.svg" alt="AI avatar">
+                        </div>
+                        <div class="message-content">
+                            你好！
+                        </div>
+                    </div>
                 </div>
 
                 <div class="input-area">
