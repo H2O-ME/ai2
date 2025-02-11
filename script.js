@@ -273,7 +273,7 @@ class AIChatApp {
         this.videoConfig = {
             apiKey: '8807fe42fcf8fa1208077876878dadbb.4xSEX4vp1Dzkx2WP',
             submitUrl: 'https://open.bigmodel.cn/api/paas/v4/videos/generations',
-            statusUrl: 'https://open.bigmodel.cn/api/paas/v4/async-result',
+            statusUrl: 'https://open.bigmodel.cn/api/paas/v4/async-result',  // 保持这个 URL
             model: 'cogvideox-flash',
             models: {
                 'cogvideox-flash': {
@@ -1777,42 +1777,70 @@ class AIChatApp {
         try {
             this.sendBtn.classList.add('loading');
             
-            // 构建请求体
-            const requestBody = {
-                model: this.videoConfig.model,
-                prompt: prompt,
-                size: '1024x1024',  // 默认尺寸
-                fps: this.videoConfig.models[this.videoConfig.model].defaultFps,
-                duration: 3,  // 默认时长
-            };
+            // 优化提示词
+            const enhancedPrompt = await this.optimizePrompt(prompt, 'video');
+            console.log('优化后的提示词:', enhancedPrompt);
 
-            // 发送请求
-            const submitResponse = await fetch(this.videoConfig.submitUrl, {
+            // 创建消息元素
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', 'ai-message');
+            
+            // 添加头像
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            const avatarImg = document.createElement('img');
+            avatarImg.src = this.avatars.ai[this.currentModel];
+            avatarImg.alt = 'AI avatar';
+            avatar.appendChild(avatarImg);
+            messageDiv.appendChild(avatar);
+            
+            // 创建消息内容区域
+            const messageContent = document.createElement('div');
+            messageContent.classList.add('message-content');
+            
+            // 创建进度显示区域
+            const progressDiv = document.createElement('div');
+            progressDiv.className = 'video-progress';
+            progressDiv.innerHTML = '<div class="loading">正在生成视频...</div>';
+            messageContent.appendChild(progressDiv);
+            
+            messageDiv.appendChild(messageContent);
+            this.chatHistory.appendChild(messageDiv);
+            this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+
+            // 发送视频生成请求
+            const response = await fetch(this.videoConfig.submitUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.videoConfig.apiKey}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(requestBody)
+                body: JSON.stringify({
+                    model: this.videoConfig.model,
+                    prompt: enhancedPrompt,
+                    size: "1024x1024",
+                    fps: 30,
+                    duration: 4
+                })
             });
 
-            if (!submitResponse.ok) {
-                throw new Error(`视频生成请求失败: ${await submitResponse.text()}`);
+            if (!response.ok) {
+                throw new Error(`视频生成请求失败: ${response.status}`);
             }
 
-            const responseData = await submitResponse.json();
-            console.log('视频生成响应:', responseData);
+            const data = await response.json();
+            console.log('视频生成响应:', data);
 
-            // 获取任务ID
-            const taskId = responseData.id;
-            if (!taskId) {
-                throw new Error('未获取到任务ID');
-            }
+            // 轮询检查任务状态
+            let taskStatus = 'PROCESSING';
+            let retryCount = 0;
+            const maxRetries = 60; // 最多等待 5 分钟
 
-            // 轮询等待处理完成
-            while (true) {
-                // 查询任务状态
-                const statusResponse = await fetch(`${this.videoConfig.statusUrl}/${taskId}`, {
+            while (taskStatus === 'PROCESSING' && retryCount < maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, 5000)); // 每 5 秒检查一次
+
+                // 使用 data.id 而不是 data.request_id
+                const statusResponse = await fetch(`${this.videoConfig.statusUrl}/${data.id}`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${this.videoConfig.apiKey}`
@@ -1820,66 +1848,59 @@ class AIChatApp {
                 });
 
                 if (!statusResponse.ok) {
-                    throw new Error(`获取任务状态失败: ${await statusResponse.text()}`);
+                    throw new Error(`获取任务状态失败: ${statusResponse.status}`);
                 }
 
                 const statusData = await statusResponse.json();
                 console.log('任务状态:', statusData);
 
-                switch (statusData.task_status) {
-                    case 'PROCESSING':
-                        // 继续等待并更新进度条
-                        if (progressDiv) {
-                            const progressFill = progressDiv.querySelector('.progress-fill');
-                            const progressText = progressDiv.querySelector('.progress-text');
-                            // 加快进度增长
-                            const currentProgress = Math.min(85, parseFloat(progressText.textContent));
-                            const newProgress = Math.min(85, currentProgress + Math.random() * 3);  // 从1.5增加到3
-                            progressFill.style.width = `${newProgress}%`;
-                            progressText.textContent = `${Math.round(newProgress)}%`;
-                        }
-                        // 减少等待时间
-                        await new Promise(resolve => setTimeout(resolve, 1000));  // 从2000ms减少到1000ms
-                        break;
+                if (statusData.error) {
+                    throw new Error(`任务状态查询失败: ${statusData.error.message}`);
+                }
 
-                    case 'SUCCESS':
-                        // 设置进度条为100%
-                        if (progressDiv) {
-                            const progressFill = progressDiv.querySelector('.progress-fill');
-                            const progressText = progressDiv.querySelector('.progress-text');
-                            progressFill.style.width = '100%';
-                            progressText.textContent = '100%';
-                            setTimeout(() => {
-                                if (progressDiv && progressDiv.parentNode) {
-                                    progressDiv.remove();
-                                }
-                            }, 500);
-                        }
+                taskStatus = statusData.task_status;
 
-                        // 获取并显示视频
-                        if (statusData.video_result && statusData.video_result.length > 0) {
+                // 更新进度显示
+                progressDiv.innerHTML = `<div class="loading">视频生成中...已等待 ${retryCount * 5} 秒</div>`;
+                retryCount++;
+
+                if (statusData.task_status === 'SUCCESS') {
+                    // 视频生成成功
                             const videoUrl = statusData.video_result[0].url;
-                            if (videoUrl) {
-                                this.addVideoMessage('ai', videoUrl);
-                                return;  // 成功后退出整个函数
-                            }
-                        }
-                        throw new Error('未找到视频结果');
-
-                    case 'FAIL':
-                        throw new Error(statusData.message || '视频生成失败');
-
-                    default:
-                        // 对于未知状态，继续等待而不是抛出错误
-                        console.log(`未知状态: ${statusData.task_status}，继续等待...`);
-                        await new Promise(resolve => setTimeout(resolve, 1000));  // 从2000ms减少到1000ms
-                        break;
+                    const coverUrl = statusData.video_result[0].cover_image_url;
+                    messageContent.innerHTML = `
+                        <video controls class="chat-video" poster="${coverUrl}">
+                            <source src="${videoUrl}" type="video/mp4">
+                            您的浏览器不支持视频播放。
+                        </video>
+                    `;
+                    break;
+                } else if (statusData.task_status === 'FAIL') {
+                    throw new Error('视频生成失败: ' + (statusData.message || '未知错误'));
                 }
             }
 
+            if (retryCount >= maxRetries) {
+                throw new Error('视频生成超时');
+            }
+
+            // 保存对话历史
+            this.conversationHistory.push({
+                role: "user",
+                content: prompt
+            });
+
+            this.conversationHistory.push({
+                role: "assistant",
+                content: "视频生成成功"
+            });
+
         } catch (error) {
             console.error('视频生成错误:', error);
-            this.addSystemMessage(`视频生成失败: ${error.message}`);
+            const messageContent = document.querySelector('.message-content');
+            if (messageContent) {
+                messageContent.innerHTML = `<div class="error-message">视频生成失败: ${error.message}</div>`;
+            }
         } finally {
             this.sendBtn.classList.remove('loading');
         }
@@ -1927,8 +1948,8 @@ class AIChatApp {
                 imageToImage: "用户要使用图生图模型，你需要扩写用户的输入提示词并用英语输出，你的输出应包含如下内容：镜头动态+光影描述+主体描述+主体运动+环境描述+主体细节描述+其他描述：情绪氛围/美学风格，同时写明不希望呈现的内容中，只输出英语提示词，不要有废话"
             };
 
-            console.log('正在使用 Qwen 模型优化提示词...');
-            const qwenResponse = await fetch(this.qwenConfig.baseUrl, {
+            console.log('使用 Qwen 模型优化提示词...');
+            const response = await fetch(this.qwenConfig.baseUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.qwenConfig.apiKey}`,
@@ -1949,12 +1970,12 @@ class AIChatApp {
                 })
             });
 
-            if (!qwenResponse.ok) {
+            if (!response.ok) {
                 throw new Error('提示词优化请求失败');
             }
 
-            const qwenData = await qwenResponse.json();
-            const enhancedPrompt = qwenData.choices[0].message.content.trim();
+            const data = await response.json();
+            const enhancedPrompt = data.choices[0].message.content.trim();
             
             console.log('优化后的英文提示词:', enhancedPrompt);
             console.log('✅ 提示词优化成功');
@@ -2385,29 +2406,16 @@ class AIChatApp {
         }
     }
 
-    // 添加 Yi 响应处理方法
-    async getYiResponse(message, systemPrompt) {
+    // 修改 getYiResponse 方法
+    async getYiResponse(message) {
         try {
             this.sendBtn.classList.add('loading');
 
-            // 类似的修改系统提示词
-            const defaultSystemPrompt = {
-                    role: "system",
-                content: `你是一个专业的AI助手，请始终使用中文回复。在回答问题时，请按照以下格式输出：
-
-思考过程：
-分析问题并列出思考步骤，说明推理过程。
-
-输出结果：
-给出最终答案或解决方案。如果包含代码，请使用标准的markdown代码块格式：
-\`\`\`语言名称
-代码内容
-\`\`\`
-`
-            };
-
             // 构建请求消息
-            let messages = [defaultSystemPrompt];
+            let messages = [{
+                    role: "system",
+                content: "你是一个专业的AI助手，请始终使用中文回复。"
+            }];
 
             // 添加历史对话
             if (this.conversationHistory.length > 0) {
@@ -2426,13 +2434,9 @@ class AIChatApp {
                 messages: messages,
                 temperature: 0.7,
                 max_tokens: 2000,
-                stream: false,
-                top_p: 0.95,
-                frequency_penalty: 0,
-                presence_penalty: 0
+                stream: false
             };
 
-            // 发送请求
             const response = await fetch(this.yiConfig.baseUrl, {
                 method: 'POST',
                 headers: {
@@ -2443,13 +2447,11 @@ class AIChatApp {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                console.error('Yi API Error:', errorData);
-                throw new Error(`HTTP error! status: ${response.status}, message: ${JSON.stringify(errorData)}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
-            let aiResponse = data.choices[0].message.content;
+            const content = data.choices[0].message.content;
 
             // 创建消息元素
             const messageDiv = document.createElement('div');
@@ -2464,27 +2466,10 @@ class AIChatApp {
             avatar.appendChild(avatarImg);
             messageDiv.appendChild(avatar);
 
-            // 添加消息内容
+            // 添加消息内容 - 直接显示内容，不显示思考过程
             const messageContent = document.createElement('div');
             messageContent.classList.add('message-content');
-            messageContent.innerHTML = '<div class="loading">正在思考...</div>';
-            messageDiv.appendChild(messageContent);
-            this.chatHistory.appendChild(messageDiv);
-
-            // 修改 marked 配置以支持语言标识
-            const renderer = new marked.Renderer();
-            renderer.code = (code, language) => {
-                const validLanguage = hljs.getLanguage(language) ? language : '';
-                const highlighted = validLanguage ? 
-                    hljs.highlight(code, { language: validLanguage }).value : 
-                    hljs.highlightAuto(code).value;
-                
-                return `<pre><code class="hljs language-${validLanguage}">${highlighted}</code></pre>`;
-            };
-
-            // 使用配置的 renderer 渲染回复内容
-            const htmlContent = marked.parse(aiResponse, { renderer });
-            messageContent.innerHTML = htmlContent;
+            messageContent.innerHTML = marked.parse(content);
 
             // 渲染数学公式
             renderMathInElement(messageContent, {
@@ -2502,7 +2487,8 @@ class AIChatApp {
                 hljs.highlightElement(block);
             });
 
-            // 滚动到底部
+            messageDiv.appendChild(messageContent);
+            this.chatHistory.appendChild(messageDiv);
             this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
 
             // 保存对话历史
@@ -2513,10 +2499,10 @@ class AIChatApp {
 
             this.conversationHistory.push({
                 role: "assistant",
-                content: aiResponse
+                content: content
             });
 
-            return aiResponse;
+            return content;
 
         } catch (error) {
             console.error('Yi API调用错误:', error);
@@ -2771,8 +2757,13 @@ class AIChatApp {
         try {
             this.sendBtn.classList.add('loading');
             
-            // 添加用户提示消息
-            this.addMessageToChat('user', prompt);
+            // 添加提示词优化过程的日志组
+            console.group('图像生成过程');
+            console.log('原始提示词:', prompt);
+            
+            // 优化提示词
+            const enhancedPrompt = await this.optimizePrompt(prompt, 'image');
+            console.log('优化后的提示词:', enhancedPrompt);
             
             // 添加等待提示
             const messageDiv = document.createElement('div');
@@ -2807,11 +2798,13 @@ class AIChatApp {
             // 构建请求体
             const requestBody = {
                 model: config.model,
-                prompt: prompt,
+                prompt: enhancedPrompt,  // 使用优化后的提示词
                 n: 1,
                 size: "1024x1024",
                 response_format: "url"
             };
+
+            console.log('发送请求:', requestBody);
 
             // 发送请求
             const response = await fetch(config.baseUrl, {
@@ -2827,7 +2820,25 @@ class AIChatApp {
             clearTimeout(timeoutId);
 
             if (!response.ok) {
-                throw new Error(`图像生成失败 (${response.status}): ${response.statusText}`);
+                // 添加更详细的错误处理
+                let errorMessage;
+                switch (response.status) {
+                    case 503:
+                        errorMessage = '服务暂时不可用，请稍后重试';
+                        break;
+                    case 429:
+                        errorMessage = '请求过于频繁，请稍后重试';
+                        break;
+                    case 401:
+                        errorMessage = 'API 密钥无效或已过期';
+                        break;
+                    case 400:
+                        errorMessage = '请求参数错误，请检查输入';
+                        break;
+                    default:
+                        errorMessage = `图像生成失败 (${response.status}): ${response.statusText}`;
+                }
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
@@ -2855,7 +2866,7 @@ class AIChatApp {
             
             messageContent.appendChild(img);
 
-            // 保存对话历史
+            // 保存对话历史 - 只在这里保存一次对话历史
             this.conversationHistory.push({
                 role: "user",
                 content: prompt
@@ -2869,19 +2880,32 @@ class AIChatApp {
         } catch (error) {
             console.error('图像生成错误:', error);
             
-            // 显示友好的错误消息
-            let errorMessage = '图像生成失败';
+            // 优化错误消息显示
+            let displayErrorMessage;
             if (error.name === 'AbortError') {
-                errorMessage = '请求超时，请稍后重试';
-            } else if (error.message.includes('504')) {
-                errorMessage = '服务器响应超时，请稍后重试';
+                displayErrorMessage = '请求超时，请稍后重试';
+            } else if (error.message.includes('503')) {
+                displayErrorMessage = '服务暂时不可用，请稍后重试 (503)';
             } else if (error.message.includes('429')) {
-                errorMessage = '请求过于频繁，请稍后重试';
+                displayErrorMessage = '请求过于频繁，请稍后重试 (429)';
+            } else if (error.message.includes('401')) {
+                displayErrorMessage = 'API 授权失败，请检查配置 (401)';
+            } else {
+                displayErrorMessage = error.message;
             }
             
-            this.addSystemMessage(errorMessage);
-            throw error;
+            // 更新消息内容为错误提示
+            const messageContent = document.querySelector('.message-content');
+            if (messageContent) {
+                messageContent.innerHTML = `<div class="error-message">${displayErrorMessage}</div>`;
+            } else {
+                this.addSystemMessage(displayErrorMessage);
+            }
+
+            // 不抛出错误，而是返回 null 表示生成失败
+            return null;
         } finally {
+            console.groupEnd();  // 结束日志组
             this.sendBtn.classList.remove('loading');
             this.abortController = null;
         }

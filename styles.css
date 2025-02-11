@@ -268,27 +268,78 @@ textarea:focus {
     border-color: var(--primary-color);
 }
 
-/* 发送按钮优化 */
-#sendBtn {
+/* 发送按钮样式修复 */
+.input-area button {
     position: absolute;
-    right: 30px;
-    bottom: 28px;
-    width: 40px;
-    height: 40px;
+    right: 12px;
+    bottom: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     background-color: var(--primary-color);
     color: white;
     border: none;
-    border-radius: 12px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--transition-speed) ease;
+    transition: all 0.3s ease;
 }
 
-#sendBtn:hover {
-    background-color: var(--primary-hover);
-    transform: translateY(-2px);
+/* 图片上传图标样式 */
+.input-area .upload-btn {
+    position: absolute;
+    right: 56px;  /* 位于发送按钮左侧 */
+    bottom: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: transparent;
+    color: var(--text-color);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.input-area .upload-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* 图片上传输入框隐藏 */
+.input-area input[type="file"] {
+    display: none;
+}
+
+/* 加载状态样式 */
+.input-area button.loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* 消息内容区域样式 */
+.message-content {
+    padding: 12px;
+    border-radius: 12px;
+    max-width: 85%;
+    word-break: break-word;
+}
+
+/* 图片容器样式 */
+.image-container {
+    margin: 8px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+.image-container img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 12px;
 }
 
 /* 消息气泡样式优化 */
@@ -1093,3 +1144,13 @@ select:focus {
 .hljs-number { color: #b5cea8; }   /* 数字 */
 .hljs-class { color: #4ec9b0; }    /* 类 */
 .hljs-variable { color: #9cdcfe; } /* 变量 */
+
+/* 视频播放器样式 */
+.chat-video {
+    width: 100%;
+    max-width: 600px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: #000;
+}
